@@ -6,66 +6,22 @@
 
 import numpy as np
 
+from utils import least_squares
 
-def gumbel(max_annual_gusts, gust_threshold=0):
+EULERCONSTANT = -0.5772215665
+PI = np.pi
+
+ln = np.log
+sqrt = np.sqrt
+
+def gumbel(max_annual_gusts):
     """Build a function that estimates the gust wind speed given
     the return period in yeats.
     
     Parameters:
     -----------
-    max_annual_gusts :: np.array
-
-    Returns:
-    -----------
-    callable
-        function that calculates wind speed given return preiod in
-        years.
-    list
-        list of tuples of measured data - (return period, gust speed)
-    
-    Other Parameters:
-    -----------------
-    gust_threshold :: float
-        Anything below this value will not be used to when curve
-        fitting, but will be used for calculating probabilities.
-    """
-    ln = np.log
-
-    max_annual_gusts = max_annual_gusts**2
-    
-    # rank maximum annual gusts
-    no_years = max_annual_gusts.size
-    rank = np.array(range(1,no_years+1))
-    V = np.sort(max_annual_gusts)
-
-    # ignore smaller velocities
-    rank = rank[V > gust_threshold]
-    V = V[V > gust_threshold]
-
-    # probability_ordinate
-    Pm = rank/(no_years+1)
-
-    # reduced variate
-    y = -ln(-ln(Pm))
-
-    # least squares straight line fit to estimate Type 1 parameters
-    _A = np.vstack([y, np.ones(y.size)]).T
-    _y = np.array(V).T
-    a, u = np.linalg.lstsq(_A, _y)[0]
-
-    # build function that returns wind speed given a return period
-    design_windspeed_fn = lambda R: np.sqrt(u+a*(-ln(-ln(1-1/R))))
-    measured_data = [(1/(1-pm), np.sqrt(v)) for pm, v in zip(Pm, V)]
-    
-    return design_windspeed_fn, measured_data
-
-def gringorten(max_annual_gusts, gust_threshold=0):
-    """Build a function that estimates the gust wind speed given
-    the return period in yeats.
-    
-    Parameters:
-    -----------
-    max_annual_gusts :: np.array
+    max_annual_gusts :: np.ndarray
+        Array of maximum annual gust wind speeds
 
     Returns:
     -----------
@@ -73,78 +29,93 @@ def gringorten(max_annual_gusts, gust_threshold=0):
         function that calculates wind speed given return preiod in
         years
     list
-        list of tuples of measured data - (return period, gust speed)
-    
-    Other Parameters:
-    -----------------
-    gust_threshold :: float
-        Anything below this value will not be used to when curve
-        fitting, but will be used for calculating probabilities.
+        list of tuples of measured data - [(return period, gust speed), ... ]
     """
-    ln = np.log
-    max_annual_gusts = max_annual_gusts**2
+    assert isinstance(max_annual_gusts, np.ndarray), "Function argument must be a numpy array."
+
+    max_annual_pressures = max_annual_gusts**2
     
     # rank maximum annual gusts
-    no_years = max_annual_gusts.size
+    no_years = max_annual_pressures.size
     rank = np.array(range(1,no_years+1))
-    V = np.sort(max_annual_gusts)
+    sorted_max_annual_pressures = np.sort(max_annual_pressures)
 
-    # ignore smaller velocities
-    rank = rank[V > gust_threshold]
-    V = V[V > gust_threshold]
+    probability_ordinate = rank/(no_years+1)
 
-    # probability_ordinate
-    Pm = (rank-0.44)/(no_years+0.12)
+    reduced_variate = -ln(-ln(probability_ordinate))
 
-    # reduced variate
-    y = -ln(-ln(Pm))
-
-    # least squares straight line fit to estimate Type 1 parameters
-    _A = np.vstack([y, np.ones(y.size)]).T
-    _y = np.array(V).T
-    a, u = np.linalg.lstsq(_A, _y)[0]
+    # least squares straight line fit y = mx + b
+    slope, intercept = least_squares(reduced_variate, sorted_max_annual_pressures)
 
     # build function that returns wind speed given a return period
-    design_windspeed_fn = lambda R: np.sqrt(u+a*(-ln(-ln(1-1/R))))
-    measured_data = [(1/(1-pm), np.sqrt(v)) for pm, v in zip(Pm, V)]
+    design_windspeed_fn = lambda x: sqrt(intercept+slope*(-ln(-ln(1-1/x))))
+    # list of tuples of calculated return period and gust speed for each annual gust
+    measured_data = [(1/(1-pm), sqrt(p)) for pm, p in zip(probability_ordinate, sorted_max_annual_pressures)]
     
     return design_windspeed_fn, measured_data
 
-def method_of_means(max_annual_gusts, gust_threshold=0):
+def gringorten(max_annual_gusts):
     """Build a function that estimates the gust wind speed given
     the return period in yeats.
     
     Parameters:
     -----------
-    max_annual_gusts :: np.array
+    max_annual_gusts :: np.ndarray
+        Array of maximum annual gust wind speeds
 
     Returns:
     -----------
     callable
         function that calculates wind speed given return preiod in
-        years.
-    
-    Other Parameters:
-    -----------------
-    gust_threshold :: float
-        Anything below this value will not be used to when curve
-        fitting, but will be used for calculating probabilities.
+        years
+    list
+        list of tuples of measured data - [(return period, gust speed), ... ]
     """
-    ln = np.log
-    EulerConstant = -0.5772215665
+    assert isinstance(max_annual_gusts, np.ndarray), "Function argument must be a numpy array."
 
-    max_annual_gusts = max_annual_gusts**2
-
-    # ignore smaller velocities
-    max_annual_gusts = max_annual_gusts[max_annual_gusts > gust_threshold]
+    max_annual_pressures = max_annual_gusts**2
     
-    mean = max_annual_gusts.mean()
-    stddev = max_annual_gusts.std()
+    # rank maximum annual gusts
+    no_years = max_annual_pressures.size
+    rank = np.array(range(1,no_years+1))
+    sorted_max_annual_pressures = np.sort(max_annual_pressures)
 
-    a = stddev * np.sqrt(6)/np.pi
-    u = mean + EulerConstant*a
+    probability_ordinate = (rank-0.44)/(no_years+0.12)
+    reduced_variate = -ln(-ln(probability_ordinate))
+
+    # least squares straight line fit y = mx + b
+    slope, intercept = least_squares(reduced_variate, sorted_max_annual_pressures)
+
+    # build function that returns wind speed given a return period
+    design_windspeed_fn = lambda x: sqrt(intercept+slope*(-ln(-ln(1-1/x))))
+    # list of tuples of calculated return period and gust speed for each annual gust
+    measured_data = [(1/(1-pm), sqrt(p)) for pm, p in zip(probability_ordinate, sorted_max_annual_pressures)]
+    
+    return design_windspeed_fn, measured_data
+
+def method_of_means(max_annual_gusts):
+    """Build a function that estimates the gust wind speed given
+    the return period in yeats.
+    
+    Parameters:
+    -----------
+    max_annual_gusts :: np.ndarray
+        Array of maximum annual gust wind speeds
+
+    Returns:
+    -----------
+    callable
+        function that calculates wind speed given return preiod in
+        years
+    """
+    assert isinstance(max_annual_gusts, np.ndarray), "Function argument must be a numpy array."
+
+    max_annual_pressures = max_annual_gusts**2
+
+    slope = max_annual_pressures.std() * sqrt(6)/PI
+    intercept = max_annual_pressures.mean() + EULERCONSTANT*slope
     
     # build function that returns wind speed given a return period
-    design_windspeed_fn = lambda R: np.sqrt(max(u+a*(-ln(-ln(1-1/R))), 0))
+    design_windspeed_fn = lambda R: sqrt(offest+slope*(-ln(-ln(1-1/R))))
     
     return design_windspeed_fn
