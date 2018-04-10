@@ -6,7 +6,7 @@
 
 import numpy as np
 
-from utils import least_squares
+from .utils import least_squares
 
 def peaks_over_threshold(max_storm_gusts, no_years, min_threshold=None, max_threshold=None):
     """Build a function that estimates the gust speed given

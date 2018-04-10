@@ -1,6 +1,8 @@
 # Copyright (c) 2017 Arup Pty. Ltd.
 # Distributed under the terms of the MIT License.
 
+import numpy as np
+
 def least_squares(x, y):
     """
     Least squares straight line fit:
@@ -14,6 +16,6 @@ def least_squares(x, y):
     y :: np.ndarray
     x :: np.ndarray
     """
-    A = np.vstack([x, np.ones(x.size))]).T
-    m, b = np.linalg.lstsq(A, y)[0]
+    A = np.vstack([x, np.ones(x.size)]).T
+    m, b = np.linalg.lstsq(A, y, rcond=None)[0]
     return m, b
