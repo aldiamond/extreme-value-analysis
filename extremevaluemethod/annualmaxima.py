@@ -7,11 +7,28 @@
 import numpy as np
 
 from .utils import least_squares
-
-EULERCONSTANT = -0.5772215665
-PI = np.pi
+from .constants import EULERCONSTANT, PI
 
 ln = np.log
+
+def fit_gumbel_line(reduced_variate, wind_speeds):
+    """
+    Least squares straight line fit y = mx + b
+
+    Parameters:
+    -----------
+    reduced_variate :: np.ndarray
+        Array of plotting positions
+    wind_speeds :: np.ndarray
+        Array of wind speeds
+
+    Returns:
+    -----------
+    callable
+        function that calculates wind speed given return period in years
+    """
+    slope, intercept = least_squares(reduced_variate, wind_speeds)
+    return lambda x: intercept+slope*(-ln(-ln(1-1/x)))
 
 def gumbel(max_annual_gusts):
     """Build a function that estimates the gust wind speed given the return period in years.
@@ -26,7 +43,7 @@ def gumbel(max_annual_gusts):
     Returns:
     -----------
     callable
-        function that calculates wind speed given return preiod in years
+        function that calculates wind speed given return period in years
     list
         list of tuples of measured data - [(return period, gust speed), ... ]
     """
@@ -40,11 +57,8 @@ def gumbel(max_annual_gusts):
     probability_ordinate = rank/(no_years+1)
     reduced_variate = -ln(-ln(probability_ordinate))
 
-    # least squares straight line fit y = mx + b
-    slope, intercept = least_squares(reduced_variate, sorted_max_annual_gusts)
-
     # build function that returns wind speed given a return period
-    design_windspeed_fn = lambda x: intercept+slope*(-ln(-ln(1-1/x)))
+    design_windspeed_fn = fit_gumbel_line(reduced_variate, sorted_max_annual_gusts)
     # list of tuples of calculated return period and gust speed for each annual gust
     measured_data = [(1/(1-pm), v) for pm, v in zip(probability_ordinate, sorted_max_annual_gusts)]
     
@@ -63,7 +77,7 @@ def gringorten(max_annual_gusts):
     Returns:
     -----------
     callable
-        function that calculates wind speed given return preiod in years
+        function that calculates wind speed given return period in years
     list
         list of tuples of measured data - [(return period, gust speed), ... ]
     """
@@ -77,11 +91,8 @@ def gringorten(max_annual_gusts):
     probability_ordinate = (rank-0.44)/(no_years+0.12)
     reduced_variate = -ln(-ln(probability_ordinate))
 
-    # least squares straight line fit y = mx + b
-    slope, intercept = least_squares(reduced_variate, sorted_max_annual_gusts)
-
     # build function that returns wind speed given a return period
-    design_windspeed_fn = lambda x: intercept+slope*(-ln(-ln(1-1/x)))
+    design_windspeed_fn = fit_gumbel_line(reduced_variate, sorted_max_annual_gusts)
     # list of tuples of calculated return period and gust speed for each annual gust
     measured_data = [(1/(1-pm), v) for pm, v in zip(probability_ordinate, sorted_max_annual_gusts)]
     
@@ -100,7 +111,7 @@ def method_of_moments(max_annual_gusts):
     Returns:
     -----------
     callable
-        function that calculates wind speed given return preiod in years
+        function that calculates wind speed given return period in years
     """
     assert isinstance(max_annual_gusts, np.ndarray), "Function argument must be a numpy array."
 
