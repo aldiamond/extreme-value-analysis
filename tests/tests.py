@@ -1,4 +1,5 @@
 # To run unittests
+# cd /to/extremevalue/method
 # python -m unittest -v tests\tests.py
 
 import unittest
