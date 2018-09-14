@@ -28,7 +28,7 @@ This python package has been written to work with python's built in installer: `
 ```py
 import numpy as np
 
-from extremevaluemethod.annualmaxima import gumbel, gringorten, method_of_means
+from extremevaluemethod.annualmaxima import gumbel, gringorten, method_of_moments
 from extremevaluemethod.independentstorms import peaks_over_threshold
 
 # example annual maximum gusts array
