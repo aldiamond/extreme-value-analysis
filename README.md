@@ -20,7 +20,7 @@ This library has been written using Python 3.6 but should work for Python 3.2 on
 This python package has been written to work with python's built in installer: `pip install`. To add this library to your installation it is as simple as:
 
 ```
-> pip install git+https://github.com/AlexLSmith/extreme-value-analysis.git
+> pip install git+https://github.com/aldiamond/extreme-value-analysis.git
 ```
 
 ## Using the library
